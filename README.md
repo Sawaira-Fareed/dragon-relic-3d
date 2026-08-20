@@ -69,6 +69,7 @@ This version turns the project into a signature hero experience with a custom GL
 | At least 2 of 3 uniforms (`u_time`, `u_resolution`, `u_mouse`) | ✅ |
 | Text readable with contrast | ✅ |
 | `devicePixelRatio` capped | ✅ |
+| Animation pauses when tab is hidden | ✅ |
 | `prefers-reduced-motion` fallback | ✅ |
 | Shader explained in comments/README | ✅ |
 | Live URL | ✅ |

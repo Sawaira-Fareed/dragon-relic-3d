@@ -486,7 +486,7 @@ function BackgroundLayer() {
   return BACKGROUND_STYLE === "weave" ? <NeonWeaveBackground /> : <EmergentParticlesBackground />;
 }
 
-function BackgroundStage() {
+function BackgroundStage({ isTabVisible }) {
   return (
     <div className="shader-layer" aria-hidden="true">
       <Canvas
@@ -494,7 +494,7 @@ function BackgroundStage() {
         dpr={[1, 1.25]}
         gl={{ antialias: false, powerPreference: "high-performance", alpha: false }}
         camera={{ position: [0, 0, 1], zoom: 1 }}
-        frameloop="always"
+        frameloop={isTabVisible ? "always" : "never"}
       >
         <Suspense fallback={null}>
           <BackgroundLayer />
@@ -660,6 +660,7 @@ export default function App() {
   const [scrollProgress, setScrollProgress] = useState(0);
   const [currentSection, setCurrentSection] = useState(0);
   const [mode, setMode] = useState("scroll");
+  const [isTabVisible, setIsTabVisible] = useState(() => !document.hidden);
 
   const theme = VARIANTS[variant];
 
@@ -672,6 +673,17 @@ export default function App() {
       document.documentElement.style.overflow = "auto";
     }
   }, [mode]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsTabVisible(!document.hidden);
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    handleVisibilityChange();
+
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, []);
 
   useEffect(() => {
     if (mode !== "scroll") return;
@@ -708,13 +720,14 @@ export default function App() {
 
   return (
     <div className="app">
-      <BackgroundStage />
+      <BackgroundStage isTabVisible={isTabVisible} />
 
       <main className="scene">
         <Canvas
           dpr={[1, 1.2]}
           gl={{ antialias: true, powerPreference: "high-performance", alpha: true }}
           camera={{ position: [0, 0, 11], fov: 35 }}
+          frameloop={isTabVisible ? "always" : "never"}
         >
           <Suspense fallback={null}>
             <Scene variant={variant} scrollProgress={scrollProgress} mode={mode} />
