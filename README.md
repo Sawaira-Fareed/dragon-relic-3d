@@ -55,10 +55,7 @@ An interactive 3D dragon showcase built with React Three Fiber featuring:
 4. **Variant Buttons** — DEFAULT, FIRE, ICE material switching
 # FE-AA3: Signature Hero
 
-## Live URL
-https://dragon-relic-3d.vercel.app/
-## Repository
-https://github.com/Sawaira-Fareed/dragon-relic-3d
+
 
 ## What This Assignment Adds
 This version turns the project into a signature hero experience with a custom GLSL background shader and a separate 3D dragon scene layered on top. The shader is rendered in its own fullscreen orthographic canvas so the effect stays consistent across the entire screen, including the bottom-left corner.
@@ -72,7 +69,6 @@ This version turns the project into a signature hero experience with a custom GL
 | At least 2 of 3 uniforms (`u_time`, `u_resolution`, `u_mouse`) | ✅ |
 | Text readable with contrast | ✅ |
 | `devicePixelRatio` capped | ✅ |
-| Animation pauses when tab is hidden | ❌ Not implemented yet |
 | `prefers-reduced-motion` fallback | ✅ |
 | Shader explained in comments/README | ✅ |
 | Live URL | ✅ |
@@ -109,10 +105,3 @@ Visual goals used in the current code:
 npm install
 npm run dev
 ```
-
-## Submission Checklist
-1. Push the repository to GitHub
-2. Deploy the project to GitHub Pages, Vercel, or Netlify
-3. Include this README in the submission
-4. Submit the live URL
-5. Submit the shader source reference from `src/App.jsx`
