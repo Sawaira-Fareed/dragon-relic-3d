@@ -9,9 +9,19 @@ body,
   overflow-x: hidden;
 }
 
+html {
+  background:
+    radial-gradient(circle at 18% 20%, rgba(89, 121, 211, 0.16), transparent 24%),
+    radial-gradient(circle at 82% 18%, rgba(167, 83, 194, 0.14), transparent 22%),
+    linear-gradient(145deg, #040814 0%, #090d1d 46%, #17112a 100%);
+}
+
 body {
   margin: 0;
-  background: #0d0d18;
+  background:
+    radial-gradient(circle at 18% 20%, rgba(89, 121, 211, 0.16), transparent 24%),
+    radial-gradient(circle at 82% 18%, rgba(167, 83, 194, 0.14), transparent 22%),
+    linear-gradient(145deg, #040814 0%, #090d1d 46%, #17112a 100%);
   overflow-y: auto;
   height: auto;
   min-height: 100%;

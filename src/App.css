@@ -3,7 +3,7 @@
 }
 
 :root {
-  --bg: #0d0d18;
+  --bg: #050816;
   --text: #f0e8f0;
   --muted: #a898b0;
   --sky-blossom: #c890b0;
@@ -24,7 +24,10 @@ body {
 }
 
 body {
-  background: #0d0d18;
+  background:
+    radial-gradient(circle at 18% 20%, rgba(89, 121, 211, 0.16), transparent 24%),
+    radial-gradient(circle at 82% 18%, rgba(167, 83, 194, 0.14), transparent 22%),
+    linear-gradient(145deg, #040814 0%, #090d1d 46%, #17112a 100%);
   color: var(--text);
   font-family: "Cormorant Garamond", Georgia, serif;
   -webkit-font-smoothing: antialiased;
@@ -45,11 +48,28 @@ body.scroll-lock {
   position: relative;
   width: 100%;
   min-height: 600vh;
-  background: #0d0d18;
+  background:
+    radial-gradient(circle at 18% 20%, rgba(89, 121, 211, 0.16), transparent 24%),
+    radial-gradient(circle at 82% 18%, rgba(167, 83, 194, 0.14), transparent 22%),
+  linear-gradient(145deg, #040814 0%, #090d1d 46%, #17112a 100%);
 }
 
 body.scroll-lock .app {
   min-height: 100vh;
+}
+
+.shader-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.shader-layer canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .scene {
@@ -61,6 +81,7 @@ body.scroll-lock .app {
   z-index: 1;
   pointer-events: auto;
   cursor: grab;
+  overflow: hidden;
 }
 
 .scene:active {
@@ -68,16 +89,10 @@ body.scroll-lock .app {
 }
 
 .scene canvas {
+  position: relative;
+  z-index: 1;
   width: 100% !important;
   height: 100% !important;
-}
-
-.scene::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(ellipse at 38% 50%, transparent 45%, rgba(5, 5, 12, 0.55) 100%);
 }
 
 .overlay {
