@@ -8,8 +8,9 @@ const VARIANTS = {
   default: {
     name: "DEFAULT",
     icon: "✦",
-    tint: "#d4c8b8",
-    glow: "#c8b090",
+    body: null,
+    background: "#050816",
+    shaderTint: "#1A1030",
     story: {
       title: "The Ancient One",
       line1: "Before fire, before ice,",
@@ -21,8 +22,9 @@ const VARIANTS = {
   fire: {
     name: "FIRE",
     icon: "🔥",
-    tint: "#620603",
-    glow: "#4a0305",
+    body: "#9E1B23",
+    background: "#1A0507",
+    shaderTint: "#3A0A0A",
     story: {
       title: "Born of Embers",
       line1: "From the heart of the volcano,",
@@ -34,8 +36,9 @@ const VARIANTS = {
   ice: {
     name: "ICE",
     icon: "❄️",
-    tint: "#30b7ec",
-    glow: "#4cbae2eb",
+    body: "#78BFD1",
+    background: "#02070B",
+    shaderTint: "#0A1A3A",
     story: {
       title: "Frozen Eternity",
       line1: "In the stillness of winter,",
@@ -46,19 +49,15 @@ const VARIANTS = {
   },
 };
 
-// Tweak these to reposition the dragon without touching the scroll logic.
-const DRAGON_START_OFFSET = {
-  x: -6.4,
-  y: -4,
-  z: 0,
-};
-
-// Swap this to "weave" if you want to roll back to the previous background.
+const DRAGON_START_OFFSET = { x: -6.4, y: -4, z: 0 };
 const BACKGROUND_STYLE = "emergent";
+
+/* =========================================================
+   NETWORK SHADER (Weave) — Ribbons + Cells + Shards + Sparks
+========================================================= */
 
 const NETWORK_VERTEX_SHADER = `
   varying vec2 vUv;
-
   void main() {
     vUv = uv;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
@@ -67,12 +66,11 @@ const NETWORK_VERTEX_SHADER = `
 
 const NETWORK_FRAGMENT_SHADER = `
   precision highp float;
-
   varying vec2 vUv;
-
   uniform float u_time;
   uniform vec2 u_mouse;
   uniform vec2 u_resolution;
+  uniform vec3 u_tint;
 
   float hash12(vec2 p) {
     vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -89,25 +87,21 @@ const NETWORK_FRAGMENT_SHADER = `
     vec2 i = floor(p);
     vec2 f = fract(p);
     vec2 u = f * f * (3.0 - 2.0 * f);
-
     float a = hash12(i);
     float b = hash12(i + vec2(1.0, 0.0));
     float c = hash12(i + vec2(0.0, 1.0));
     float d = hash12(i + vec2(1.0, 1.0));
-
     return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
   }
 
   float fbm(vec2 p) {
     float value = 0.0;
     float amplitude = 0.5;
-
     for (int i = 0; i < 5; i++) {
       value += amplitude * noise(p);
       p *= 2.03;
       amplitude *= 0.5;
     }
-
     return value;
   }
 
@@ -143,16 +137,10 @@ const NETWORK_FRAGMENT_SHADER = `
     float baseNoise = fbm(p * 1.6 + vec2(u_time * 0.03, -u_time * 0.022));
     float deepNoise = fbm(p * 3.4 - vec2(u_time * 0.055, u_time * 0.04));
 
-    vec3 skyBlossom = vec3(0.78, 0.56, 0.69);
-    vec3 blossomLight = vec3(0.91, 0.74, 0.84);
-    vec3 blossomDeep = vec3(0.30, 0.13, 0.34);
-    vec3 inkRose = vec3(0.16, 0.08, 0.20);
-    vec3 color = mix(inkRose, blossomDeep, smoothstep(-0.92, 0.35, p.y));
-    color = mix(color, skyBlossom, smoothstep(-0.15, 1.0, p.x * 0.42 + p.y * 0.55 + 0.35));
-    color = mix(color, blossomLight, smoothstep(0.15, 1.05, p.x + p.y * 0.3));
+    vec3 color = mix(u_tint * 0.15, u_tint * 0.5, smoothstep(-0.92, 0.35, p.y));
+    color = mix(color, u_tint * 0.8, smoothstep(-0.15, 1.0, p.x * 0.42 + p.y * 0.55 + 0.35));
     color += vec3(0.08, 0.02, 0.09) * baseNoise * 0.22;
     color += vec3(0.04, 0.01, 0.06) * deepNoise * 0.18;
-    color += vec3(0.10, 0.05, 0.12) * smoothstep(0.78, 0.1, length(p)) * 0.18;
 
     float ribbonGlow = 0.0;
     float lineStrength = 0.0;
@@ -166,13 +154,11 @@ const NETWORK_FRAGMENT_SHADER = `
     lineStrength += ribbon(vec2(p.x, -p.y) + vec2(-0.08, -0.14), 0.28, 0.19, 4.5, -0.24, 0.017, 5.0);
 
     ribbonGlow = pow(lineStrength, 1.6);
-
     vec3 strandColor = vec3(0.72, 0.28, 0.98);
     strandColor = mix(strandColor, vec3(1.0, 0.44, 0.16), smoothstep(0.2, 0.85, baseNoise));
     strandColor = mix(strandColor, vec3(0.18, 0.56, 1.0), smoothstep(0.3, 0.98, deepNoise));
     color += strandColor * ribbonGlow * 2.5;
     color += vec3(1.0, 0.82, 0.55) * ribbonGlow * 0.45;
-    color += vec3(1.0, 0.42, 0.18) * lineStrength * 0.18;
 
     float cellScale = 2.2;
     vec2 gv = p * cellScale + vec2(u_time * 0.05, -u_time * 0.035);
@@ -180,7 +166,6 @@ const NETWORK_FRAGMENT_SHADER = `
     vec2 f = fract(gv);
     float md1 = 8.0;
     float md2 = 8.0;
-
     for (int y = -1; y <= 1; y++) {
       for (int x = -1; x <= 1; x++) {
         vec2 g = vec2(float(x), float(y));
@@ -188,18 +173,14 @@ const NETWORK_FRAGMENT_SHADER = `
         o = 0.5 + 0.5 * sin(o * 6.2831 + vec2(0.0, 1.57) + u_time * vec2(0.08, -0.06));
         vec2 r = g + o - f;
         float d = dot(r, r);
-        if (d < md1) {
-          md2 = md1;
-          md1 = d;
-        } else if (d < md2) {
-          md2 = d;
-        }
+        if (d < md1) { md2 = md1; md1 = d; }
+        else if (d < md2) { md2 = d; }
       }
     }
 
     float cellFill = smoothstep(0.72, 0.0, md1);
     float cellEdge = smoothstep(0.1, 0.0, abs(sqrt(md2) - sqrt(md1)));
-    vec3 cellColor = mix(vec3(0.42, 0.16, 0.65), vec3(0.9, 0.78, 1.0), baseNoise);
+    vec3 cellColor = mix(u_tint, vec3(0.9, 0.78, 1.0), baseNoise);
     color += cellColor * cellFill * 0.16;
     color += vec3(0.95, 0.7, 1.0) * cellEdge * 0.78;
 
@@ -238,21 +219,22 @@ const NETWORK_FRAGMENT_SHADER = `
 
     color += (grain - 0.5) * 0.03;
     color = clamp(color, 0.0, 1.0);
-
     gl_FragColor = vec4(color, 1.0);
   }
 `;
 
-function NeonWeaveBackground() {
+function NeonWeaveBackground({ variant }) {
   const meshRef = useRef();
   const materialRef = useRef();
   const { size, mouse } = useThree();
+  const tintColor = useMemo(() => new THREE.Color(VARIANTS[variant].shaderTint), [variant]);
 
   useFrame((state) => {
     if (!materialRef.current) return;
     materialRef.current.uniforms.u_time.value = state.clock.elapsedTime;
     materialRef.current.uniforms.u_mouse.value.set(mouse.x, mouse.y);
     materialRef.current.uniforms.u_resolution.value.set(size.width, size.height);
+    materialRef.current.uniforms.u_tint.value.lerp(tintColor, 0.04);
   });
 
   return (
@@ -264,20 +246,25 @@ function NeonWeaveBackground() {
           u_time: { value: 0 },
           u_mouse: { value: new THREE.Vector2() },
           u_resolution: { value: new THREE.Vector2(1, 1) },
+          u_tint: { value: tintColor.clone() },
         }}
         vertexShader={NETWORK_VERTEX_SHADER}
         fragmentShader={NETWORK_FRAGMENT_SHADER}
         depthWrite={false}
         depthTest={false}
         side={THREE.DoubleSide}
+        toneMapped={false}
       />
     </mesh>
   );
 }
 
+/* =========================================================
+   EMERGENT SHADER — Orb Network + Web Lines
+========================================================= */
+
 const EMERGENT_VERTEX_SHADER = `
   varying vec2 vUv;
-
   void main() {
     vUv = uv;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
@@ -286,12 +273,11 @@ const EMERGENT_VERTEX_SHADER = `
 
 const EMERGENT_FRAGMENT_SHADER = `
   precision highp float;
-
   varying vec2 vUv;
-
   uniform float u_time;
   uniform vec2 u_mouse;
   uniform vec2 u_resolution;
+  uniform vec3 u_tint;
 
   float hash12(vec2 p) {
     vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -308,12 +294,10 @@ const EMERGENT_FRAGMENT_SHADER = `
     vec2 i = floor(p);
     vec2 f = fract(p);
     vec2 u = f * f * (3.0 - 2.0 * f);
-
     float a = hash12(i);
     float b = hash12(i + vec2(1.0, 0.0));
     float c = hash12(i + vec2(0.0, 1.0));
     float d = hash12(i + vec2(1.0, 1.0));
-
     return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
   }
 
@@ -351,17 +335,14 @@ const EMERGENT_FRAGMENT_SHADER = `
     vec2 jitter = hash22(seed) - 0.5;
     vec2 base = (cell + 0.5 + jitter * 0.7) / dims * 2.0 - 1.0;
     base.x *= dims.x / max(dims.y, 1.0);
-
     float phase = hash12(seed + 11.3) * 6.28318;
     vec2 drift = vec2(
       sin(u_time * 0.26 + phase + cell.y * 0.7),
       cos(u_time * 0.22 + phase + cell.x * 0.6)
     ) * 0.08;
-
     vec2 mouse = u_mouse * 0.4;
     float mouseDist = distance(base, mouse);
     vec2 mousePull = normalize(mouse - base + 0.0001) * exp(-mouseDist * 2.6) * 0.12;
-
     return base + drift + mousePull;
   }
 
@@ -375,16 +356,14 @@ const EMERGENT_FRAGMENT_SHADER = `
     float nebula = fbm(p * 1.2 + vec2(u_time * 0.03, -u_time * 0.022));
     float deepNebula = fbm(p * 2.7 - vec2(u_time * 0.04, u_time * 0.03));
 
-    vec3 bgDark = vec3(0.025, 0.03, 0.08);
-    vec3 bgMid = vec3(0.08, 0.11, 0.23);
-    vec3 bgLight = vec3(0.18, 0.15, 0.34);
+    vec3 bgDark = u_tint * 0.15;
+    vec3 bgMid = u_tint * 0.45;
+    vec3 bgLight = u_tint * 0.75;
     vec3 color = mix(bgDark, bgMid, smoothstep(-0.9, 0.85, p.y));
     color = mix(color, bgLight, smoothstep(0.15, 1.1, p.x * 0.3 + p.y * 0.5 + 0.25));
     color += vec3(0.12, 0.07, 0.2) * nebula * 0.28;
     color += vec3(0.05, 0.1, 0.2) * deepNebula * 0.24;
     color += vec3(0.03, 0.05, 0.1) * smoothstep(1.25, 0.0, length(p));
-    color += vec3(0.07, 0.1, 0.22) * smoothstep(1.6, 0.0, distance(p, vec2(-1.08, -1.06))) * 0.9;
-    color += vec3(0.26, 0.12, 0.4) * smoothstep(1.4, 0.0, distance(p, vec2(-1.08, -1.06))) * 0.45;
 
     const int COLS = 8;
     const int ROWS = 6;
@@ -402,7 +381,6 @@ const EMERGENT_FRAGMENT_SHADER = `
       float core = exp(-d * d / (size * size * 0.28));
       float aura = exp(-d * d / (size * size * 2.6));
       vec3 pc = particlePalette(seed);
-
       orbGlow += core;
       color += pc * core * 0.46;
       color += pc * aura * 0.16;
@@ -412,7 +390,6 @@ const EMERGENT_FRAGMENT_SHADER = `
         float line = exp(-pow(sdSegment(p, pos, rightPos) / 0.014, 2.0));
         webGlow += line * 0.8;
       }
-
       if (cell.y < float(ROWS - 1)) {
         vec2 downPos = particlePos(cell + vec2(0.0, 1.0), dims);
         float line = exp(-pow(sdSegment(p, pos, downPos) / 0.013, 2.0));
@@ -424,28 +401,21 @@ const EMERGENT_FRAGMENT_SHADER = `
     color += vec3(0.92, 0.38, 0.66) * webGlow * 0.12;
     color += vec3(1.0, 0.76, 0.28) * orbGlow * 0.08;
 
-    float starburst = exp(-pow(length(p - vec2(0.12, -0.04)) * 1.7, 2.0));
-    color += vec3(0.55, 0.32, 1.0) * starburst * 0.2;
-    color += vec3(0.96, 0.7, 0.86) * starburst * 0.1;
-
-    float centerFalloff = smoothstep(1.5, 0.2, length(p));
-    color *= mix(0.78, 1.0, centerFalloff);
-
     float mouseGlow = exp(-distance(p, mouse) * 2.2);
     color += vec3(0.9, 0.68, 1.0) * mouseGlow * 0.2;
     color += vec3(0.2, 0.5, 1.0) * mouseGlow * 0.11;
 
     color += (grain - 0.5) * 0.03;
     color = clamp(color, 0.0, 1.0);
-
     gl_FragColor = vec4(color, 1.0);
   }
 `;
 
-function EmergentParticlesBackground() {
+function EmergentParticlesBackground({ variant }) {
   const meshRef = useRef();
   const materialRef = useRef();
   const { camera, viewport, size, mouse } = useThree();
+  const tintColor = useMemo(() => new THREE.Color(VARIANTS[variant].shaderTint), [variant]);
 
   useEffect(() => {
     if (!meshRef.current) return;
@@ -459,6 +429,7 @@ function EmergentParticlesBackground() {
     materialRef.current.uniforms.u_time.value = state.clock.elapsedTime;
     materialRef.current.uniforms.u_mouse.value.set(mouse.x, mouse.y);
     materialRef.current.uniforms.u_resolution.value.set(size.width, size.height);
+    materialRef.current.uniforms.u_tint.value.lerp(tintColor, 0.04);
   });
 
   return (
@@ -470,6 +441,7 @@ function EmergentParticlesBackground() {
           u_time: { value: 0 },
           u_mouse: { value: new THREE.Vector2() },
           u_resolution: { value: new THREE.Vector2(1, 1) },
+          u_tint: { value: tintColor.clone() },
         }}
         vertexShader={EMERGENT_VERTEX_SHADER}
         fragmentShader={EMERGENT_FRAGMENT_SHADER}
@@ -482,11 +454,7 @@ function EmergentParticlesBackground() {
   );
 }
 
-function BackgroundLayer() {
-  return BACKGROUND_STYLE === "weave" ? <NeonWeaveBackground /> : <EmergentParticlesBackground />;
-}
-
-function BackgroundStage({ isTabVisible }) {
+function BackgroundStage({ isTabVisible, variant }) {
   return (
     <div className="shader-layer" aria-hidden="true">
       <Canvas
@@ -497,7 +465,11 @@ function BackgroundStage({ isTabVisible }) {
         frameloop={isTabVisible ? "always" : "never"}
       >
         <Suspense fallback={null}>
-          <BackgroundLayer />
+          {BACKGROUND_STYLE === "weave" ? (
+            <NeonWeaveBackground variant={variant} />
+          ) : (
+            <EmergentParticlesBackground variant={variant} />
+          )}
         </Suspense>
       </Canvas>
     </div>
@@ -505,7 +477,7 @@ function BackgroundStage({ isTabVisible }) {
 }
 
 /* =========================================================
-   DRAGON MODEL — No Shadows, Optimized
+   DRAGON MODEL — Sirf Body Color Change
 ========================================================= */
 
 function DragonModel({ variant, scrollProgress, mode }) {
@@ -533,16 +505,9 @@ function DragonModel({ variant, scrollProgress, mode }) {
     const box = new THREE.Box3().setFromObject(model);
     const size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
-
     const desiredHeight = 3.5;
     const scale = desiredHeight / Math.max(size.y, 0.001);
-
-    return {
-      scale,
-      x: -center.x * scale,
-      y: -box.min.y * scale,
-      z: -center.z * scale,
-    };
+    return { scale, x: -center.x * scale, y: -box.min.y * scale, z: -center.z * scale };
   }, [model]);
 
   useEffect(() => {
@@ -552,56 +517,47 @@ function DragonModel({ variant, scrollProgress, mode }) {
       const name = child.name.toLowerCase();
       const original = material.userData.originalColor?.clone() || new THREE.Color("#d4c8b8");
 
-      if (name.includes("eye") || name.includes("teeth") || name.includes("tooth") || name.includes("claw")) {
+      if (
+        name.includes("eye") || name.includes("teeth") || name.includes("tooth") ||
+        name.includes("claw") || name.includes("wing") || name.includes("horn") ||
+        name.includes("spine") || name.includes("crest")
+      ) {
         material.color.copy(original);
-        if (material.emissive) material.emissive.set("#000000");
-        material.emissiveIntensity = 0;
+        if (material.emissive) { material.emissive.set("#000000"); material.emissiveIntensity = 0; }
         return;
       }
 
-      if (variant === "default") {
+      if (variant === "default" || !theme.body) {
         material.color.copy(original);
-        if (material.emissive) material.emissive.set("#000000");
-        material.emissiveIntensity = 0;
+        if (material.emissive) { material.emissive.set("#000000"); material.emissiveIntensity = 0; }
         material.roughness = 0.65;
         return;
       }
 
-      const tint = new THREE.Color(theme.tint);
-      const strength = name.includes("wing") ? 0.5 : name.includes("horn") || name.includes("spine") || name.includes("crest") ? 0.3 : 0.38;
-
-      material.color.copy(original).lerp(tint, strength);
-      material.roughness = 0.5;
-
-      if (material.emissive) {
-        material.emissive.set(theme.glow);
-        material.emissiveIntensity = 0.22;
-      }
+      material.color.set(theme.body);
+      material.roughness = 0.55;
+      if (material.emissive) { material.emissive.set("#000000"); material.emissiveIntensity = 0; }
     });
   }, [model, variant, theme]);
 
   useFrame((state) => {
     if (!groupRef.current) return;
     const t = state.clock.elapsedTime;
-
     const breathe = 1 + Math.sin(t * 1.1) * 0.012;
     groupRef.current.scale.setScalar(fit.scale * breathe);
 
     if (mode === "scroll") {
       const xPos = fit.x + DRAGON_START_OFFSET.x + scrollProgress * 2;
       groupRef.current.position.x = THREE.MathUtils.lerp(groupRef.current.position.x, xPos, 0.04);
-
       groupRef.current.position.y = THREE.MathUtils.lerp(
         groupRef.current.position.y,
         fit.y + DRAGON_START_OFFSET.y + Math.sin(t * 1.2) * 0.05,
         0.04
       );
-
       const targetRotation = scrollProgress * Math.PI * 1.5 + t * 0.03;
       groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, targetRotation, 0.03);
     } else {
       groupRef.current.position.x = THREE.MathUtils.lerp(groupRef.current.position.x, fit.x + DRAGON_START_OFFSET.x, 0.04);
-
       groupRef.current.position.y = THREE.MathUtils.lerp(
         groupRef.current.position.y,
         fit.y + DRAGON_START_OFFSET.y + Math.sin(t * 1.2) * 0.05,
@@ -623,29 +579,19 @@ function DragonModel({ variant, scrollProgress, mode }) {
 
 function Scene({ variant, scrollProgress, mode }) {
   const theme = VARIANTS[variant];
-
   return (
     <>
-      <fog attach="fog" args={["#050816", 14, 34]} />
-
+      <fog attach="fog" args={[theme.background, 14, 34]} />
       <ambientLight intensity={0.32} color="#f3e4ee" />
       <directionalLight position={[-5, 7, 6]} intensity={0.95} color="#ffdff1" />
-      <pointLight position={[0, 0.5, 3]} intensity={1.0} color={theme.glow} />
-
+      <pointLight position={[0, 0.5, 3]} intensity={1.0} color="#f7c9df" />
       <DragonModel variant={variant} scrollProgress={scrollProgress} mode={mode} />
-
       <OrbitControls
-        makeDefault
-        enablePan={false}
-        enableZoom={mode === "drag"}
-        enableRotate={mode === "drag"}
-        enableDamping
-        dampingFactor={0.08}
-        minDistance={5}
-        maxDistance={15}
-        target={[-4, -3.5, 0]}
-        rotateSpeed={0.8}
-        zoomSpeed={1}
+        makeDefault enablePan={false}
+        enableZoom={mode === "drag"} enableRotate={mode === "drag"}
+        enableDamping dampingFactor={0.08}
+        minDistance={5} maxDistance={15}
+        target={[-4, -3.5, 0]} rotateSpeed={0.8} zoomSpeed={1}
       />
     </>
   );
@@ -661,7 +607,6 @@ export default function App() {
   const [currentSection, setCurrentSection] = useState(0);
   const [mode, setMode] = useState("scroll");
   const [isTabVisible, setIsTabVisible] = useState(() => !document.hidden);
-
   const theme = VARIANTS[variant];
 
   useEffect(() => {
@@ -675,25 +620,18 @@ export default function App() {
   }, [mode]);
 
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      setIsTabVisible(!document.hidden);
-    };
-
+    const handleVisibilityChange = () => setIsTabVisible(!document.hidden);
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    handleVisibilityChange();
-
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, []);
 
   useEffect(() => {
     if (mode !== "scroll") return;
-
     const handleScroll = () => {
       const scrollY = window.scrollY;
       const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
       const progress = Math.min(Math.max(scrollY / Math.max(totalHeight, 1), 0), 1);
       setScrollProgress(progress);
-
       const sections = document.querySelectorAll(".section");
       sections.forEach((section, index) => {
         const rect = section.getBoundingClientRect();
@@ -702,26 +640,18 @@ export default function App() {
         }
       });
     };
-
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, [mode]);
 
   const toggleMode = () => {
-    if (mode === "scroll") {
-      setMode("drag");
-      setScrollProgress(0);
-      window.scrollTo({ top: 0 });
-    } else {
-      setMode("scroll");
-      window.scrollTo({ top: 0 });
-    }
+    if (mode === "scroll") { setMode("drag"); setScrollProgress(0); window.scrollTo({ top: 0 }); }
+    else { setMode("scroll"); window.scrollTo({ top: 0 }); }
   };
 
   return (
     <div className="app">
-      <BackgroundStage isTabVisible={isTabVisible} />
-
+      <BackgroundStage isTabVisible={isTabVisible} variant={variant} />
       <main className="scene">
         <Canvas
           dpr={[1, 1.2]}
@@ -742,10 +672,7 @@ export default function App() {
             <h1>THE DRAGON</h1>
           </div>
           <div className="header-right">
-            <div className="variant-badge">
-              <span>{theme.icon}</span>
-              {theme.name}
-            </div>
+            <div className="variant-badge"><span>{theme.icon}</span>{theme.name}</div>
             <button className="mode-toggle" onClick={toggleMode}>
               {mode === "scroll" ? "🖐️ DRAG MODE" : "📜 SCROLL MODE"}
             </button>
@@ -754,13 +681,8 @@ export default function App() {
 
         <div className="variant-switcher">
           {Object.entries(VARIANTS).map(([key, item]) => (
-            <button
-              key={key}
-              className={`variant-btn ${variant === key ? "active" : ""}`}
-              onClick={() => setVariant(key)}
-            >
-              <span>{item.icon}</span>
-              {item.name}
+            <button key={key} className={`variant-btn ${variant === key ? "active" : ""}`} onClick={() => setVariant(key)}>
+              <span>{item.icon}</span>{item.name}
             </button>
           ))}
         </div>
@@ -774,38 +696,31 @@ export default function App() {
                 <p className="subtitle">Scroll to explore</p>
               </div>
             </section>
-
             <section className={`section ${currentSection === 1 ? "visible" : ""}`}>
               <div className="story-text">
                 <p className="label">FORM & DETAIL</p>
                 <h3>Every surface is built around silhouette, proportion, and controlled detail.</h3>
               </div>
             </section>
-
             <section className={`section ${currentSection === 2 ? "visible" : ""}`}>
               <div className="story-text">
                 <h2>{theme.story.title}</h2>
-                <p>{theme.story.line1}</p>
-                <p>{theme.story.line2}</p>
+                <p>{theme.story.line1}</p><p>{theme.story.line2}</p>
               </div>
             </section>
-
             <section className={`section ${currentSection === 3 ? "visible" : ""}`}>
               <div className="story-text">
                 <p className="label">SURFACE</p>
                 <h3>Light reveals what geometry alone cannot.</h3>
-                <p>{theme.story.line3}</p>
-                <p>{theme.story.line4}</p>
+                <p>{theme.story.line3}</p><p>{theme.story.line4}</p>
               </div>
             </section>
-
             <section className={`section ${currentSection === 4 ? "visible" : ""}`}>
               <div className="story-text">
                 <p className="label">BUILT TO BE SEEN</p>
                 <h3>A study in silhouette, material, light, and motion.</h3>
               </div>
             </section>
-
             <section className={`section ${currentSection === 5 ? "visible" : ""}`}>
               <div className="story-text">
                 <h2>Explore every angle</h2>
